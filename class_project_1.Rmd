@@ -1,0 +1,1093 @@
+---
+
+title: "MSBA"
+author: "MSBA265"
+date: "2024-11-23"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+
+
+---
+
+
+
+
+
+```{r setup, include=FALSE}
+# Load Required Libraries
+library(randomForest)
+library(caret)
+library(ggplot2)
+library(dplyr)
+library(DT)
+
+
+
+# Any additional setup code, such as options
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+
+
+
+# Data Preparation
+
+### Step 1: Load the Data
+ - We have used the following code to import the dataset from a file called 'Cleaned_Final_80K.csv'. This step has ensured that the data is available in R for further analysis, and we have stored it in a variable called 'data'
+
+
+
+### Step 2: Convert Categorical Variables
+ - We have converted two columns, 'Category' and 'Shipping Address State', into factor variables using the as.factor() function. As R is designed to handle categorical data with factors, this has facilitated more efficient operations such as grouping and statistical modeling.
+
+
+
+### Step 3: Preview the Data
+- We have used head(data) to display the first six rows of the dataset, providing a quick overview of the data's structure.
+
+
+
+```{r load-data}
+# Load the Data
+data <- read.csv("C:\\Users\\gnana\\OneDrive\\Desktop\\Documents\\Cleaned_Final_80K.csv")
+# Convert Categorical Variables to Factors
+data$Category <- as.factor(data$Category)
+data$Shipping.Address.State <- as.factor(data$Shipping.Address.State)
+
+# View the data to confirm
+head(data)
+```
+
+## Result Interpretation
+- After using the head(data) function to display the first six rows of the dataset, we see in the result that the data has been loaded successfully into R without errors or issues.
+
+---
+
+
+
+
+# Data Splitting in R
+
+- Now, we split the data into training and test subsets, with 80 percent allocated for training and 20 percent for testing. This step is critical for building and evaluating machine learning models.
+
+
+```{r}
+# Split Data 
+set.seed(42)
+trainIndex <- createDataPartition(data$Total.Price, p = 0.8, list = FALSE)
+trainData <- data[trainIndex, ]
+testData <- data[-trainIndex, ]
+
+```
+
+
+# Recursive Feature Elimination (RFE)
+
+- We have used the Recursive Feature Elimination (RFE) technique to identify the most important features for predicting Total.Price.
+
+
+- First, we have set up rfeControl to understand how RFE operates, specifying rfFuncs (Random Forest) to rank features and 5-fold cross-validation (method = 'cv') to ensure accurate results. Then, we use the rfe function to evaluate different subsets of features, excluding Total.Price from the predictors. The argument sizes = c(1:5) instructs RFE to test subsets with 1 to 5 features.
+This process helps us determine the optimal combination of features, balancing simplicity and effectiveness for the model.
+  
+
+- This process helps us determine the optimal combination of features, striking a balance between simplicity and effectiveness for the model.
+
+
+
+```{r}
+# Feature Selection: Using Recursive Feature Elimination (RFE)
+control <- rfeControl(functions = rfFuncs, method = "cv", number = 5)
+results <- rfe(
+  trainData[, -which(names(trainData) == "Total.Price")], 
+  trainData$Total.Price,
+  sizes = c(1:5),  # Test feature subsets from 1 to 5 predictors
+  rfeControl = control
+)
+
+```
+
+
+# Training Random Forest Model with Selected Features
+
+- We have used this code to train a Random Forest model using the features selected during the RFE process. We start by setting a seed (set.seed(42)) to ensure the results are reproducible.
+
+
+- The predictors(results) function extracts the top features chosen by RFE, and we use as.formula to dynamically create a formula in the format Total.Price ~ feature1 + feature2. The randomForest function is then used to train the model with the training data (trainData). We set ntree = 100, meaning the model builds 100 decision trees, and mtry = 2, which specifies the number of features considered at each split in a tree. By enabling importance = TRUE, we ensure that the model calculates feature importance, helping us understand which features are most influential in predicting Total.Price.
+
+
+```{r}
+# Train Random Forest Model with Selected Features
+set.seed(42)
+selected_features <- predictors(results)
+formula <- as.formula(paste("Total.Price ~", paste(selected_features, collapse = " + ")))
+rf_model <- randomForest(
+  formula, 
+  data = trainData, 
+  ntree = 100, 
+  mtry = 2, 
+  importance = TRUE
+)
+
+
+```
+
+---
+
+
+
+#  Making Predictions on Test Data
+
+- Making Predictions on Test Data
+In this code, we have used the trained Random Forest model to make predictions on the test dataset. The predict function applies the model (rf_model) to the testData to generate predictions for the target variable, Total.Price.
+Since rf_model has already learned the relationships between the features and the target during training, it applies this knowledge to predict the values of Total.Price for the unseen test data. The predictions object stores these predicted values, which can then be compared to the actual values in the test set to evaluate the model’s performance.
+price`. 
+
+
+```{r}
+# Make Predictions on Test Data
+predictions <- predict(rf_model, testData)
+```
+
+```{r}
+# Model Summary
+print(rf_model)
+
+```
+## Output Interpretation
+
+- Output Interpretation
+This output shows how well the Random Forest model has predicted Total.Price. The model has used 100 trees (ntree = 100) and considered 2 features at each decision point (mtry = 2).
+The Mean Squared Residuals (MSR) is 5354.378, indicating the average error the model has made—lower values suggest a better fit. The model has explained 90.97% of the variance, meaning it has captured most of the patterns in the data effectively.
+
+
+---
+
+
+
+
+# Visualization: Actual vs Predicted Cost
+
+- We have used this code to create a data frame called viz_data to help visualize the actual values of Total.Price compared with the predicted values from the model. It includes three columns: one for the actual values, one for the predictions, and another as an index to identify each row of test data.
+This setup has made it easier to plot and compare how closely the predictions match the actual data.
+
+
+```{r}
+# Visualization: Actual vs Predicted Cost
+viz_data <- data.frame(
+  Actual = testData$Total.Price,
+  Predicted = predictions,
+  Index = 1:nrow(testData)
+)
+
+
+```
+
+
+## Graph 1: Actual Costs Scatter Plot
+
+- We have used this code to create a scatter plot using ggplot2 to show the actual costs from the test data. It plotted the row index on the x-axis and the actual cost on the y-axis, using green dots to represent each data point. The plot included a title, labeled axes, and a clean minimalist design to make the data easy to interpret.
+
+
+```{r}
+# Graph 1: Actual Costs
+actual_plot <- ggplot(viz_data, aes(x = Index, y = Actual)) +
+  geom_point(color = "darkgreen", size = 2, alpha = 0.9) +
+  labs(
+    title = "Actual Costs",
+    x = "Index (Test Data)",
+    y = "Actual Cost"
+  ) +
+  theme_minimal()
+
+
+```
+
+```{r}
+# Display Graphs
+print(actual_plot)
+```
+
+
+#### Output Interpretation: Actual Costs Plot
+
+- The plot showed the actual costs from the test dataset as green dots. The x-axis represented the index (row number of the data), and the y-axis displayed the actual cost values. Most costs were concentrated at lower values, with a few higher outliers, particularly beyond index 1500. This suggested that most data points fell within a smaller cost range, with occasional spikes in costs.
+
+
+## Graph 2: Predicted Costs Scatter Plot
+
+- We have used this code to create a scatter plot displaying the predicted costs from the model. It used light green dots to plot the predictions against the test data index. The plot added a title, axis labels, and applied a minimalist theme for clarity.
+
+```{r}
+# Graph 2: Predicted Costs
+predicted_plot <- ggplot(viz_data, aes(x = Index, y = Predicted)) +
+  geom_point(color = "lightgreen", size = 2, alpha = 0.9) +
+  labs(
+    title = "Predicted Costs",
+    x = "Index (Test Data)",
+    y = "Predicted Cost"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+
+# Display Graphs
+
+print(predicted_plot)
+```
+
+
+#### Output Interpretation: Predicted Costs Plot
+- This plot showed the predicted costs from the model as green dots. Similar to the actual costs plot, most predicted values were clustered at lower cost levels, with some higher predictions scattered towards the right side of the plot. A few extreme outliers were visible at the higher end of the predicted cost scale. The distribution suggested that the model’s predictions aligned with the actual data in many cases, though there were also some larger predicted costs.
+
+
+---
+
+
+
+# Predict Average Cost for a Given Category
+
+- With this code, we have created a function called predict_average_cost to find the average predicted cost for a specific product category. We started by filtering the dataset to include only the rows where the Category matches the one we were interested in. Once we had the filtered data, we used our trained Random Forest model (rf_model) to predict the costs for all items in that category. Finally, we calculated the average of those predicted costs using the mean function and returned it. This function has allowed us to easily explore the model’s predictions for any category we choose.
+
+
+
+
+```{r}
+# New Model: Predict Average Cost for a Given Category
+predict_average_cost <- function(category_name) {
+  # Filter data for the specified category
+  category_data <- filter(data, Category == category_name)
+  
+  # Make predictions for the specified category data
+  category_predictions <- predict(rf_model, category_data)
+  
+  # Calculate and return the average predicted cost
+  avg_predicted_cost <- mean(category_predictions)
+  return(avg_predicted_cost)
+}
+
+
+```
+
+
+
+
+```{r}
+# Example Usage: Predict Average Cost for a Category
+category_name <- "Electronics"  # Replace with your category
+avg_cost <- predict_average_cost(category_name)
+print(paste("Average Predicted Cost for Category", category_name, ":", avg_cost))
+
+```
+# Code Example
+
+- In this example, we have used the predict_average_cost function to calculate the average predicted cost for a specific category. First, we defined a category of interest by assigning "Electronics" to the variable category_name. This category was then passed to the predict_average_cost function, which filtered the data, made predictions using the Random Forest model, and calculated the average predicted cost for that category. Finally, we used the print function to display the result.
+
+
+---
+
+
+
+
+#  Trend Analysis for Actual vs Predicted Cost (First 500 Items)
+
+Trend Analysis for Actual vs Predicted Cost (First 500 Items)
+We have used this code to create a line plot comparing actual and predicted costs for the first 500 items in the dataset. First, we filtered the data to include only the first 500 rows from viz_data and stored it in viz_data_subset1. Using ggplot2, we plotted the index (x-axis) against the costs (y-axis).
+We used geom_line to create two separate lines: one for the actual costs (colored black) and one for the predicted costs (colored red). Labels for the title, axes, and legend were added using the labs function. To keep the plot clean and easy to read, we applied the theme_minimal theme. The scale_color_manual function was used to manually assign colors to the actual and predicted cost lines.
+
+
+
+```{r}
+# Trend Analysis for Actual vs Predicted Cost (First 500 Items)
+viz_data_subset1 <- viz_data[1:500, ]
+trend_plot1 <- ggplot(viz_data_subset1, aes(x = Index)) +
+  geom_line(aes(y = Actual, color = "Actual"), size = 1) +
+  geom_line(aes(y = Predicted, color = "Predicted"), size = 1) +
+  labs(
+    title = "Trend Analysis for First 500 Items: Actual vs Predicted",
+    x = "Index",
+    y = "Cost",
+    color = "Cost Type"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("Actual" = "black", "Predicted" = "red"))
+
+```
+
+
+
+```{r}
+# Display Trend Plot
+print(trend_plot1)
+```
+
+
+## Output Interpretation
+
+- The output of the code plot showed us the trend of actual vs. predicted costs for the first 500 items. The black line represented the actual costs, while the red line represented the model’s predicted costs.
+
+- The x-axis corresponded to the data index (item numbers), and the y-axis showed the cost values. We observed that the predicted costs (red line) generally followed the actual costs (black line), but with noticeable deviations in certain areas. For example, some spikes in predicted costs did not align perfectly with the actual costs, particularly at higher values.
+
+- While the model captured the overall trend of the costs, there were occasional mismatches, especially with extreme values. This visualization helped us understand the model’s accuracy and identify areas where it might have required improvement.
+
+
+---
+
+
+
+
+#  Repeat for the Next Sets of 500 Items
+
+- By using the same code as above, we created trend analysis plots to compare actual and predicted costs in subsets of 500 items from the dataset.
+
+- Using a for loop, we split the data into batches of 500 rows. For each subset, we created a viz_data_subset to isolate the relevant rows. Then, using ggplot2, we plotted the index (x-axis) against the actual and predicted costs (y-axis) using geom_line. Each plot included a title with the range of items (e.g., “Items 501 to 1000”).
+
+
+
+```{r}
+# Repeat for the Next Sets of 500 Items
+for (i in 2:5) {
+  start_idx <- (i - 1) * 500 + 1
+  end_idx <- min(i * 500, nrow(viz_data))
+  viz_data_subset <- viz_data[start_idx:end_idx, ]
+  trend_plot <- ggplot(viz_data_subset, aes(x = Index)) +
+    geom_line(aes(y = Actual, color = "Actual"), size = 1) +
+    geom_line(aes(y = Predicted, color = "Predicted"), size = 1) +
+    labs(
+      title = paste("Trend Analysis for Items", start_idx, "to", end_idx, ": Actual vs Predicted"),
+      x = "Index",
+      y = "Cost",
+      color = "Cost Type"
+    ) +
+    theme_minimal() +
+    scale_color_manual(values = c("Actual" = "black", "Predicted" = "red"))
+  
+  # Display Trend Plot
+  print(trend_plot)
+}
+
+```
+
+---
+
+
+
+# Radial Bar Plot of Average Price by Category
+
+- Grouping the Data and Calculating the Average Price by Category
+By using this code, we created a Radial Bar Plot to show the average price for each product category. First, we grouped the data by Category and calculated the average price for each category using the group_by and summarise functions from dplyr.
+Then, we used ggplot2 to plot the data. We used the reorder(Category, Average_Price) function to sort the categories by their average price, and geom_bar(stat = "identity") to create the bars. Finally, we applied coord_polar() to make the plot circular, turning it into a radial bar chart.
+
+```{r}
+library(ggplot2)
+
+#Radial Bar Plot of Average Price by Category
+
+# Group data and calculate average price by category
+avg_price_category <- data %>%
+  group_by(Category) %>%
+  summarise(Average_Price = mean(Total.Price, na.rm = TRUE))
+
+# Radial Bar Plot
+ggplot(avg_price_category, aes(x = reorder(Category, Average_Price), y = Average_Price, fill = Category)) +
+  geom_bar(stat = "identity") +
+  coord_polar() +
+  labs(title = "Radial Bar Plot of Average Price by Category", x = "", y = "Average Price") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+```
+
+
+
+## Output Interpretation
+
+
+- This plot showed the average price for each product category in a circular format. Each bar represented a category, and the length of the bar indicated the average price for that category. Categories like NOTEBOOK_COMPUTER and CAMERA had the longest bars, meaning they had the highest average prices. On the other hand, categories like VEHICLE_SAFETY_CAMERA and TABLET_COMPUTER had much shorter bars, indicating their average prices were lower.
+The colors made it easy to identify each category, and the plot provided a simple way to see and compare the prices of different categories.
+
+
+---
+
+
+
+
+# Interactive 3D Bubble Plot
+
+
+- We used this code to create an interactive 3D Bubble Plot using the plotly library to visualize the relationship between shipping state, order month, and total price.
+- First, we ensured the Order.Date column was converted into a date format and extracted the month from it, storing it as Order.Month. Next, we used the plot_ly function to create the 3D plot.
+- The x-axis represented the Shipping.Address.State, the y-axis showed the Order.Month, and the z-axis displayed the Total.Price. The color argument mapped data points to their Category, and the size argument scaled the bubble sizes based on Total.Price. The layout function added a title and labels for the axes, making the visualization clear and interactive.
+
+
+```{r}
+
+# Interactive 3D Bubble Plot
+
+# Ensure Required Libraries are Loaded
+library(dplyr)
+library(plotly)
+
+# Convert Dates and Create Features
+data$Order.Date <- as.Date(data$Order.Date)  # Assuming Order.Date is present in your data
+data$Order.Month <- as.numeric(format(data$Order.Date, "%m"))  # Extract the month from Order.Date
+
+# Interactive 3D Bubble Plot
+plot_ly(data, x = ~Shipping.Address.State, y = ~Order.Month, z = ~Total.Price, 
+        type = 'scatter3d', mode = 'markers', color = ~Category, size = ~Total.Price) %>%
+  layout(title = '3D Bubble Plot: Total Price vs. Shipping State vs. Order Month',
+         scene = list(xaxis = list(title = 'Shipping State'),
+                      yaxis = list(title = 'Order Month'),
+                      zaxis = list(title = 'Total Price')))
+
+
+```
+
+
+
+## Output Interpretation
+
+
+- This 3D bubble plot provided a detailed view of how total price varied across shipping states, order months, and categories. Each bubble represented a transaction, with its size showing the Total.Price.
+
+- The x-axis showed different shipping states, the y-axis displayed the order month, and the z-axis represented the transaction’s total price. Categories were color-coded, as indicated in the legend, helping us identify patterns across product types. For example, larger bubbles highlighted high-value transactions in specific states or months.
+
+- This interactive visualization allowed us to rotate and zoom into specific areas for a closer look, helping identify trends or outliers in the data.
+
+
+
+
+
+
+
+
+
+#  Sankey Diagram
+
+
+- This code created a Sankey diagram to visualize the relationship between product categories and shipping states. It began by summarizing the data using the count() function to calculate the number of transactions for each category-state pair.
+
+- A nodes data frame listed all unique categories and states, while a links data frame mapped these to numerical indices and included the transaction counts as weights. The sankeyNetwork() function then generated the diagram, linking categories to states with line thickness proportional to transaction volumes. Additional parameters controlled the appearance of the nodes and labels.
+
+```{r}
+
+ #  Sankey Diagram
+
+# Load required library
+library(networkD3)
+
+# Check column names to verify existing fields
+colnames(data)
+
+# Prepare data for Sankey Diagram (using available columns)
+# Let's assume 'Category' and 'Shipping.Address.State' are available
+sankey_data <- data %>%
+  count(Category, Shipping.Address.State)
+
+# Create Nodes Data
+nodes <- data.frame(name = unique(c(sankey_data$Category, sankey_data$Shipping.Address.State)))
+
+# Create Links Data
+links <- data.frame(
+  source = match(sankey_data$Category, nodes$name) - 1,
+  target = match(sankey_data$Shipping.Address.State, nodes$name) - 1,
+  value = sankey_data$n
+)
+
+# Create Sankey Diagram
+sankeyNetwork(Links = links, Nodes = nodes, Source = 'source', Target = 'target', Value = 'value', NodeID = 'name', 
+              fontSize = 12, nodeWidth = 30)
+
+
+```
+
+
+
+## Output Interpretation
+
+
+- The Sankey diagram showed how product categories (on the left) were distributed across shipping states (on the right). Each line represented a flow, with its thickness indicating the number of transactions; thicker lines meant more shipments.
+
+- For instance, categories like “Camera Flash” had connections to multiple states, while others were more localized. The right-hand nodes included states and an “Unknown” category for unspecified locations.
+
+- This visualization provided a clear view of product demand across regions, helping us identify popular categories and major shipping destinations.
+
+
+
+---
+
+
+
+
+#  Facet Grid Histogram by Month
+
+
+- The code produced a facet grid histogram to explore the distribution of Total.Price across different months. It used ggplot() to plot Total.Price on the x-axis, with Order.Month used as a fill aesthetic to distinguish data for each month.
+
+- The geom_histogram() function created the histograms with a specified bin width of 50, making it easier to observe price ranges. The facet_wrap() function split the plot into separate panels for each month, with the scales adjusted independently for the y-axis. Titles and labels were added for clarity using labs(), and theme_minimal() ensured a clean design, while the legend was hidden for simplicity.
+
+
+```{r}
+# Facet Grid Histogram by Month
+ggplot(data, aes(x = Total.Price, fill = Order.Month)) +
+  geom_histogram(binwidth = 50, alpha = 0.7) +
+  facet_wrap(~ Order.Month, scales = "free_y") +
+  labs(title = "Facet Grid Histogram of Total Price by Order Month", x = "Total Price", y = "Frequency") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+## Output Interpretation
+
+-The output showed a set of histograms, with each panel representing the frequency distribution of Total.Price for a specific month. These panels allowed for an easy comparison of how transaction prices varied across different months.
+
+- The height of the bars indicated the frequency of transactions within specific price ranges, while the y-axis for each panel was independently scaled to emphasize variations in transaction volumes. For instance, months with more transactions had taller bars, indicating higher sales activity, while months with fewer transactions showed shorter bars.
+
+- This visualization was valuable for identifying trends, such as months with higher average prices, increased sales activity, or wider price ranges, offering insights into seasonal or monthly patterns.
+
+
+---
+
+
+
+
+#  3D Surface Plot
+
+We have created a **3D Surface Plot** using this code to show how the average price changes across different order days and shipping states:
+
+1. **Work with Dates**:
+   - We converted the `Order.Date` column into a proper date format.
+   - From the date, we extracted the day of the month (e.g., 1 for the 1st, 2 for the 2nd) and saved it as `Order.Day`.
+
+2. **Calculate Average Prices**:
+   - We grouped the data by `Order.Day` and `Shipping.Address.State`.
+   - For each combination, we calculated the **average price** using the `mean` function.
+
+3. **Format the Data**:
+   - The data was transformed into a wide format, where each column represents a shipping state, and the rows represent the order days. This format is necessary for creating the surface plot.
+
+4. **Create the Surface Plot**:
+   - We used the `plot_ly` function to build a 3D surface plot.
+   - The x-axis represents the **order day**, the y-axis shows the **shipping states**, and the z-axis (height) represents the **average price**.
+
+
+```{r}
+
+# 3D Surface Plot
+
+
+# Load required libraries
+library(dplyr)
+library(tidyr)
+library(plotly)
+
+# Convert Dates and Create Features
+# Make sure Order.Date is converted to a Date object
+data$Order.Date <- as.Date(data$Order.Date)
+
+# Extract the day from Order.Date
+data$Order.Day <- as.numeric(format(data$Order.Date, "%d"))
+
+# Prepare Data for Surface Plot
+avg_price_surface <- data %>%
+  group_by(Order.Day, Shipping.Address.State) %>%
+  summarise(Average_Price = mean(Total.Price, na.rm = TRUE)) %>%
+  pivot_wider(names_from = Shipping.Address.State, values_from = Average_Price)
+
+# Convert to Matrix for Surface Plot
+avg_price_matrix <- as.matrix(avg_price_surface[, -1])
+
+# 3D Surface Plot
+plot_ly(z = ~avg_price_matrix, type = "surface") %>%
+  layout(title = "3D Surface Plot of Average Price Across Order Day and Shipping State",
+         scene = list(xaxis = list(title = "Order Day"),
+                      yaxis = list(title = "Shipping State"),
+                      zaxis = list(title = "Average Price")))
+
+
+```
+
+
+
+
+## Output Interpretation
+
+The **3D Surface Plot** helped us to  see how average prices varied based on order days and shipping states:
+
+- **Spikes**: Tall peaks in the surface showed days and states where the average price is much higher. For example, a spike at `Order Day = 24` and `Shipping State    13` showed an average price of around $1,005.
+- **Flat Areas**: Flat regions indicated consistent pricing over days or states.
+- **Variations**: The uneven surface showed how prices changed across different states and days.
+
+- This plot made it easy to spot trends, such as which states or days had higher average prices.
+
+
+
+---
+
+
+
+#  Violin Plot of Total Price by Category
+
+
+- By using this code, we created a violin plot to visualize how Total.Price was distributed across different categories using the ggplot2 library. The x-axis represented the categories, and the y-axis showed the price values, with geom_violin() displaying the density and spread of the data for each category.
+
+- By setting trim = FALSE, the plot included the full range of prices, and theme_minimal() provided a clean, simple design. The x-axis labels were rotated to make the category names easier to read when there were many of them.
+
+
+```{r}
+
+# Violin Plot of Total Price by Category
+# Load required library
+library(ggplot2)
+
+# Violin Plot for Total Price by Category
+ggplot(data, aes(x = Category, y = Total.Price, fill = Category)) +
+  geom_violin(trim = FALSE, alpha = 0.7) +
+  labs(title = "Violin Plot of Total Price by Category", x = "Category", y = "Total Price") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+## Output Interpretation
+
+
+- The Violin Plot showed how total prices were distributed for each category:
+
+- X-axis (Category): Displayed the different product categories.
+- Y-axis (Total Price): Represented the range of total prices for each category.
+- The shape of the violins indicated the spread of prices:
+
+- Wide sections showed where prices were more frequent or concentrated.
+- Narrow sections represented less frequent prices.
+- The height of the violins showed the range of prices, including the lowest and highest values.
+
+---
+
+
+
+#  Ribbon Plot
+
+
+- This code created a 3D Ribbon Plot that showed how the minimum and maximum prices varied across different order months.
+
+### Data Grouping:
+
+- The data was grouped by Order.Month, which represented the months of the year. For each month, the lowest price (min_price) and the highest price (max_price) were calculated using the min() and max() functions. This step summarized how prices ranged for each month.
+
+### Creating the Plot:
+
+The plot_ly function was used to create the ribbon plot.
+- The x-axis represented the Order.Month.
+- The y-axis showed the Minimum Price.
+- The z-axis represented the Maximum Price.
+- The ribbon connected the min and max prices for each month, forming a clear 3D visualization.
+
+### Adding Labels:
+
+- A title and labels for the axes were added to make the plot easy to interpret.
+
+```{r}
+
+
+# Ribbon Plot
+
+library(plotly)
+
+# Prepare Data for Ribbon Plot
+ribbon_data <- data %>%
+  group_by(Order.Month) %>%
+  summarise(min_price = min(Total.Price, na.rm = TRUE), max_price = max(Total.Price, na.rm = TRUE))
+
+# Create 3D Ribbon Plot
+plot_ly(ribbon_data, x = ~Order.Month, y = ~min_price, z = ~max_price, type = 'scatter3d', mode = 'lines',
+        line = list(width = 10)) %>%
+  layout(title = "3D Ribbon Plot for Price Variation by Order Month",
+         scene = list(xaxis = list(title = 'Order Month'),
+                      yaxis = list(title = 'Min Price'),
+                      zaxis = list(title = 'Max Price')))
+
+```
+
+
+
+
+## Output Interpretation
+
+
+- The 3D Ribbon Plot helped us see how prices varied across months.
+- The x-axis showed the order month.
+- The y-axis represented the lowest prices.
+- The z-axis represented the highest prices.
+- The ribbon visually connected the minimum and maximum prices, showing how much prices fluctuated in each month. For months with a wider ribbon, prices had a larger gap between low and high values, indicating more variation.
+- Sharp spikes in the z-axis highlighted months where expensive items were ordered, while flatter areas showed months with more consistent pricing.
+- This plot provided a clear view of pricing trends throughout the year, helping identify months with significant price variations or high-value transactions.
+
+---
+
+
+# Confusion Matrix
+
+
+- In this code, we created a confusion matrix to evaluate how well the model predicted categorized price ranges (Low, Medium, High).
+
+### Defining Price Ranges:
+
+- We started by defining thresholds for categorizing Total.Price into bins (Low, Medium, High) using the cut() function.
+
+### The breaks in the cut() function were set as c(-Inf, 500, 1000, Inf):
+
+- Prices below 500 were categorized as “Low.”
+- Prices between 500 and 1000 were categorized as “Medium.”
+- Prices above 1000 were categorized as “High.”
+
+### Applying Bins:
+- These bins were applied to both the actual values (testData$Total.Price) and the model’s predictions (predictions).
+ 
+###Generating the Confusion Matrix:
+
+- The confusionMatrix function from the caret package was used to compare the predicted and actual bins. This generated a detailed performance summary.
+
+```{r}
+
+# Confusion Matrix
+
+# Load required libraries
+library(caret)
+library(dplyr)
+
+# Create bins for Predicted and Actual Prices
+# Define price thresholds (low, medium, high). Adjust breaks based on data distribution.
+breaks <- c(-Inf, 500, 1000, Inf)  # Replace with appropriate thresholds for your data
+
+# Binning the actual and predicted prices into categories
+testData$Actual_Binned <- cut(testData$Total.Price, breaks = breaks, labels = c("Low", "Medium", "High"))
+testData$Predicted_Binned <- cut(predictions, breaks = breaks, labels = c("Low", "Medium", "High"))
+
+# Generate Confusion Matrix
+confusion_mat <- confusionMatrix(testData$Predicted_Binned, testData$Actual_Binned)
+
+# Display Confusion Matrix
+print(confusion_mat)
+
+```
+ 
+ 
+##  Output Interpretation
+- The confusion matrix gave us a detailed look at how well the model predicted each price category (Low, Medium, High):
+
+### Low Class:
+- The model correctly predicted 1,918 instances as Low.
+- It misclassified 4 Medium instances as Low.
+- No High instances were mistakenly predicted as Low.
+
+### Medium Class:
+- The model correctly predicted 64 instances as Medium.
+- It misclassified 2 Low instances as Medium.
+
+### High Class:
+- The model correctly predicted 29 instances as High.
+- It misclassified 10 Medium instances as High.
+
+### Overall Model Performance:
+- Accuracy: The model correctly classified 99.21% of all instances.
+- The 95% confidence interval for accuracy ranged from 98.72% to 99.55%, meaning we were very confident that the true accuracy fell within this range.
+- Kappa Score: The Kappa score was 0.9213, showing strong agreement between the predicted and actual values, far beyond what would happen by chance.
+- No Information Rate (NIR): Predicting the most frequent class (Low) would have given an accuracy of 94.72%, but our model significantly outperformed this (p-value < 2.2e-16).
+
+### Class-Level Performance:
+
+1.Low Class:
+  - Sensitivity (Recall): 99.90% of Low instances were correctly identified.
+  - Precision: 99.79% of the predictions made as Low were actually correct.
+  
+2.Medium Class:
+  - Sensitivity: The model identified 82.05% of Medium instances correctly, which was slightly lower than the other classes.
+  - Precision: 96.97% of the predictions for Medium were correct.
+  
+3.High Class:
+ - Sensitivity: 74.36% of High instances were correctly identified.
+ - Precision: 100% of the predictions made for High were correct.
+
+#  categories to predict the average price
+
+- We used this code to predict the average price for a specific product category from a predefined list.
+1. The predict_average_cost function was utilized, which:
+ - Filtered the data for the given category.
+ - Made predictions using the trained model.
+ - Calculated the average predicted price.
+ - In this example, we inputted "HEADPHONES" as the category to calculate its average predicted price.
+
+```{r}
+# Choose from the following  categories to predict the average price:
+#HEADPHONES			
+#NOTEBOOK_COMPUTER				
+#PERSONAL_COMPUTER			
+#TABLET_COMPUTER				
+#COMPUTER_SPEAKER			
+#CELLULAR_PHONE				
+#SECURITY_CAMERA		
+#CAMERA_STAGE_LIGHTING_MODIFIER			
+#CAMERA_LENS_FILTERS			
+#CAMERA_FILM
+#CAMERA_DIGITAL				
+#ONBOARD_CAMERA			
+#CAMERA_LENSES				
+#VEHICLE_SAFETY_CAMERA		
+#CAMERA				
+#CAMERA_FLASH			
+#CAMERA_POWER_SUPPLY 
+print(paste("Average Predicted Cost for Category", category_name, ":", avg_cost))
+
+predict_average_cost("HEADPHONES")
+
+```
+
+
+## Output Interpretation
+
+- The output shows the **average predicted cost** for `HEADPHONES`, calculated as **46.60**.  
+- This means the model predicts that the average price for the `HEADPHONES` category is approximately **$46.60**.
+
+
+
+# Average Predicted Price for Each Category
+
+This code helps us calculate the **average predicted price** for all product categories in the dataset. We defined a function called `predict_average_cost_all_categories` that processes each category one by one:
+
+- **Identify Unique Categories**: The function identifies all the unique product categories in the dataset.
+
+- **Filter Data**: For each category, it filters the data to include only the rows belonging to that category.
+
+- **Predict Prices**: It uses the trained Random Forest model (`rf_model`) to predict prices for the filtered items.
+
+- **Calculate Average**: The average of these predicted prices will be  calculated using the `mean` function.
+
+- **Store Results**: This result, along with the category name,will be  stored in a data frame (`avg_price_by_category`).
+
+```{r}
+# Ensure Required Libraries are Loaded
+library(dplyr)
+
+# Calculate Average Predicted Price for Each Category in the Dataset
+predict_average_cost_all_categories <- function() {
+  # Get unique categories from the data
+  unique_categories <- unique(data$Category)
+  
+  # Create an empty data frame to store results
+  avg_price_by_category <- data.frame(
+    Category = character(),
+    Average_Predicted_Price = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  # Loop through each category and calculate the average predicted price
+  for (cat in unique_categories) {
+    # Filter data for the specified category
+    category_data <- filter(data, Category == cat)
+    
+    # Make predictions for the specified category data
+    category_predictions <- predict(rf_model, category_data)
+    
+    # Calculate the average predicted cost for the category
+    avg_predicted_cost <- mean(category_predictions)
+    
+    # Append the result to the data frame
+    avg_price_by_category <- rbind(
+      avg_price_by_category, 
+      data.frame(Category = as.character(cat), Average_Predicted_Price = avg_predicted_cost)
+    )
+  }
+  
+  # Return the results
+  return(avg_price_by_category)
+}
+
+# Get the average predicted price for all categories
+avg_prices <- predict_average_cost_all_categories()
+
+# Display the results
+print(avg_prices)
+
+```
+
+
+
+## Output Interpretation
+
+The resulting table listed all categories along with their average predicted prices. For example:
+
+- **HEADPHONES** had an average predicted price of **$46.60**, making them relatively affordable.
+- **NOTEBOOK_COMPUTER** stood out with the highest average predicted price of **$567.19**, showing it was one of the most expensive categories.
+- **COMPUTER_SPEAKER** had one of the lowest predicted prices at just **$20.98**.
+
+This table was a helpful way to compare categories at a glance. It provided insights into which categories were generally more expensive and which were budget-friendly. 
+
+- Categories like `NOTEBOOK_COMPUTER` and `PERSONAL_COMPUTER` were priced higher on average.
+- Categories like `COMPUTER_SPEAKER` and `SECURITY_CAMERA` were much more affordable.
+
+This information was useful for developing pricing strategies or understanding customer spending patterns.
+
+
+
+
+
+
+#  Actual and Predicted Price for a Specific Product Title
+
+This code gives us  a function called `get_price_for_title`, which helps us find the **actual price** and the **predicted price** for a specific product title. Here’s how it works:
+
+- **Search for the Product**:
+  - The function searches the dataset for the product title we’re interested in.
+  - If the product isn’t found, the function returns a message like, “Product title not found.”
+
+- **Predict the Price**:
+  - If the product is in the dataset, the function uses our trained Random Forest model (`rf_model`) to predict the price for that product.
+
+- **Create a Table**:
+  - The function creates a table that includes:
+    - The product’s title.
+    - Its actual price (from the dataset).
+    - Its predicted price (calculated by the model).
+  - Both prices are rounded to two decimal places to keep them neat and easy to read.
+
+```{r}
+# Ensure Required Libraries are Loaded
+
+# Actual and Predicted Price for a Specific Product Title
+
+
+library(dplyr)
+
+# Function to Get Actual and Predicted Price for a Specific Product Title
+get_price_for_title <- function(title_name) {
+  # Filter data for the specified product title
+  title_data <- filter(data, Title == title_name)
+  
+  # Check if the product title exists in the dataset
+  if (nrow(title_data) == 0) {
+    return(paste("Product title", title_name, "not found in the dataset."))
+  }
+  
+  # Make predictions for the specified product title data
+  title_predictions <- predict(rf_model, title_data)
+  
+  # Create a data frame with actual and predicted prices for the title
+  price_info <- data.frame(
+    Product_Title = title_name,
+    Actual_Price = round(title_data$Total.Price, 2),  # Round actual price to 2 decimal places
+    Predicted_Price = round(title_predictions, 2)  # Round predicted price to 2 decimal places
+  )
+  
+  # Return the result
+  return(price_info)
+}
+
+# Example Usage: Get Actual and Predicted Price for a Specific Product Title
+product_title <- "Betron BS10 Earphones Wired Headphones in Ear Noise Isolating Earbuds with Microphone and Volume Control Powerful Bass Driven Sound, 12mm Large Drivers, Ergonomic Design"  # Replace with the product title you want to query
+price_result <- get_price_for_title(product_title)
+
+# Display the result
+print(price_result)
+
+```
+
+
+## Output Interpretation
+
+
+The function `get_price_for_title` generated a table showing the **actual prices** and **predicted prices** for the product titled `Betron BS10 Earphones Wired Headphones...`. Here's what the output revealed:
+
+1. **Product Title**:
+   - The table showed the same product title repeated for all rows, as the data was filtered for this specific product.
+
+2. **Actual Price**:
+   - This column displayed the recorded prices for the product in the dataset across different transactions, such as **$13.99**, **$9.99**, **$14.99**, etc.
+
+3. **Predicted Price**:
+   - This column contained the prices predicted by the model for the same product, such as **$14.77**, **$12.31**, **$16.08**, etc.
+
+4. **Comparison**:
+   - The predicted prices were very close to the actual prices. For example:
+     - When the actual price was **$13.99**, the model predicted **$14.77**.
+     - When the actual price was **$9.99**, the model predicted **$12.31**.
+
+This table helped us evaluate the model's performance and highlighted its ability to provide accurate price predictions for specific product titles.
+
+
+
+
+#  Predicted and Actual Price for Each Product Title in the Dataset
+
+- Now we called the same function  `get_price_for_title` for all products which displayed the Predicted and Actual Price for Each Product Title in the Dataset
+
+
+```{r}
+
+# Predicted and Actual Price for Each Product Title in the Dataset
+# Ensure Required Libraries are Loaded
+library(dplyr)
+
+# Calculate Predicted and Actual Price for Each Product Title in the Dataset
+predict_and_actual_cost_all_titles <- function() {
+  # Get unique product titles from the data
+  unique_titles <- unique(data$Title)
+  
+  # Create an empty data frame to store results
+  price_by_title <- data.frame(
+    Product_Title = character(),
+    Actual_Price = numeric(),
+    Predicted_Price = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  # Loop through each product title and calculate the predicted and actual price
+  for (title in unique_titles) {
+    # Filter data for the specified product title
+    title_data <- filter(data, Title == title)
+    
+    # Make predictions for the specified product title data
+    title_predictions <- predict(rf_model, title_data)
+    
+    # Create a data frame with actual and predicted prices for the title
+    title_results <- data.frame(
+      Product_Title = rep(as.character(title), nrow(title_data)),
+      Actual_Price = round(title_data$Total.Price, 2),  # Round actual price to 2 decimal places
+      Predicted_Price = round(title_predictions, 2)  # Round predicted price to 2 decimal places
+    )
+    
+    # Append the result to the data frame
+    price_by_title <- rbind(price_by_title, title_results)
+  }
+  
+  # Return the results
+  return(price_by_title)
+}
+
+# Get the predicted and actual price for all product titles
+predicted_and_actual_prices_by_title <- predict_and_actual_cost_all_titles()
+
+# Display the results
+print(predicted_and_actual_prices_by_title)
+
+```
+
+#  Conclusion
+
+- The analysis demonstrated the effectiveness of the Random Forest model in predicting product prices based on key features. By splitting the data into training and testing subsets, applying Recursive Feature Elimination (RFE) for feature selection, and training the model on the most relevant predictors, we achieved a model that accurately captured price trends. The evaluation metrics, including a high percentage of variance explained and a low Mean Squared Residual, indicated strong predictive performance. Visualizations comparing actual and predicted costs further validated the model's accuracy, with most predictions closely aligning with actual values.
+
+- Category-specific predictions revealed insights into pricing dynamics, highlighting affordable categories like **HEADPHONES** and expensive ones like **NOTEBOOK_COMPUTERS**, which provided valuable information for pricing strategies. The 3D Bubble Plot, Sankey Diagram, and other visualizations showcased relationships between factors like shipping states, months, and product categories, helping to identify trends and outliers. The confusion matrix illustrated robust performance in classifying products into price ranges, with high accuracy and precision across categories.
+
+- Overall, the code provided a comprehensive understanding of price trends, category-level insights, and model performance, making it an effective tool for strategic decision-making and price optimization. 
+
+
+
