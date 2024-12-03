@@ -4,7 +4,7 @@
 
 This repository contains the **Amazon Price Prediction** project files, which aim to enhance pricing models for improved customer retention and increased market share. The project focuses on understanding customer behavior, analyzing pricing trends, and predicting prices using advanced machine learning models.
 
-The analysis leverages datasets collected from APIs, Kaggle, and other sources, providing insights into competitive pricing strategies and customer purchasing behavior. The project utilizes time-series analysis, predictive modeling, and interactive visualizations to offer actionable recommendations for strategic pricing decisions.
+The analysis leverages datasets collected from Kaggle, and other sources, providing insights into competitive pricing strategies and customer purchasing behavior. The project utilizes time-series analysis, predictive modeling, and interactive visualizations to offer actionable recommendations for strategic pricing decisions.
 
 ---
 
@@ -13,15 +13,13 @@ The analysis leverages datasets collected from APIs, Kaggle, and other sources, 
 1. **Python Script:** `Amazon_Sales_Prediction_Using_Python.py` – Implements machine learning models for price prediction and data preprocessing.
 2. **R Markdown File:** `Amazon_Sales_Prediction_Using_R.rmd` – Explores advanced analytics and machine learning for pricing trends.
 3. **Power BI File:** `Amazon_Sales_Prediction_through_Visualization.pbix` – Creates interactive graphs visualizing customer behavior and pricing impacts.
-4. **Dataset:** Contains transaction data and competitor pricing information (collected via APIs and Kaggle).
+4. **Dataset:** Contains transaction data and competitor pricing information (collected via Kaggle).
 
 ---
 
 ## Methodology
 
 ### Data Sources:
-- **Competitor Pricing Data:** Real-time data from APIs monitoring price changes.
-- **Customer Behavior Data:** Combined datasets from online activities and purchasing trends.
 - **Kaggle Dataset:** [Amazon Sales Dataset](https://www.kaggle.com/datasets/karkavelrajaj/amazon-sales-dataset).
 
 ### Analytical Approach:
