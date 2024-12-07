@@ -46,12 +46,12 @@ The analysis leverages datasets collected from Kaggle, and other sources, provid
 ## Team Members
 
 - [**Sai Samhith Mulupuru**](https://www.linkedin.com/in/saisamhithm/) *(Team Lead)*
-- **Gnanadeep Namineni**
-- **Pavan Kalyan Miriyala**
+- [**Gnanadeep Namineni**](https://www.linkedin.com/in/gnana-deep-namineni-756853131/)
+- [**Pavan Kalyan Miriyala**](https://www.linkedin.com/in/pavan-kalyan-miriyala-9904992ba/)
 - [**Sirisha Aisola**](https://www.linkedin.com/in/sirisha-aisola-1099812b6/)
-- **Vikrambabu Thalluri**
+- [**Vikrambabu Thalluri**]
 - [**Abhishek Heyer Vijjeswarapu**](https://www.linkedin.com/in/abishekhk/)
-- **Sooryan Sanel**
+- [**Sooryan Sanel**](https://www.linkedin.com/in/sooryansanel/)
 - [**Sushmith Naik Banoth**](https://www.linkedin.com/in/sushmith-n/)
 
 ---
